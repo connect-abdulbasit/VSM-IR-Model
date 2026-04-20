@@ -11,35 +11,38 @@ A Vector Space Model (VSM) based Information Retrieval system built on 56 Trump 
 VSM-IR-Model/
 ├── apps/
 │   ├── backend/
-│   │   ├── app.py               Flask REST API
+│   │   ├── app.py               Flask REST API (6 endpoints)
 │   │   └── requirements.txt     Python dependencies
 │   └── frontend/
 │       ├── src/
-│       │   ├── App.jsx
+│       │   ├── App.jsx              Root layout — mounts all components
+│       │   ├── main.jsx             React entry point
+│       │   ├── index.css            Global CSS variables and reset
 │       │   ├── components/
-│       │   │   ├── SearchBar.jsx
-│       │   │   ├── QueryPresets.jsx
-│       │   │   ├── Results.jsx
-│       │   │   ├── StatsPanel.jsx
-│       │   │   └── DocumentModal.jsx
+│       │   │   ├── SearchBar.jsx    Query input and submit button
+│       │   │   ├── QueryPresets.jsx Clickable preset query chips
+│       │   │   ├── Results.jsx      Ranked result cards with score badges
+│       │   │   ├── StatsPanel.jsx   Index statistics (vocab, docs, postings)
+│       │   │   └── DocumentModal.jsx Full document viewer with term highlighting
 │       │   ├── context/
-│       │   │   └── SearchContext.jsx
+│       │   │   └── SearchContext.jsx Global state via useReducer + Context API
 │       │   └── services/
-│       │       └── api.js
+│       │       └── api.js           HTTP client for all backend calls
+│       ├── vite.config.js           Vite dev server config (port 3000)
 │       └── package.json
 ├── packages/
 │   └── core/
-│       ├── preprocessing.py     Tokenization, stopwords, lemmatization
-│       ├── indexer.py           TF-IDF index builder + save/load
-│       ├── vsm.py               Cosine similarity engine
-│       └── query_processor.py  Query entry point
+│       ├── preprocessing.py     Text cleaning, tokenization, stopword removal, lemmatization
+│       ├── indexer.py           TF-IDF index builder + JSON save/load
+│       ├── vsm.py               Query vector builder + cosine similarity engine
+│       └── query_processor.py  Thin wrapper — formats results for the API
 ├── data/
-│   ├── documents/               56 Trump speech .txt files
-│   ├── stopwords/               stopwords-list.txt
-│   └── queries/                 queries.txt (10 sample queries)
+│   ├── documents/               speech_0.txt through speech_55.txt (56 files)
+│   ├── stopwords/               stopwords-list.txt (26 words)
+│   └── queries/                 queries.txt (17 sample queries)
 ├── indexes/
-│   └── vsm_index.json           Saved TF-IDF index (auto-generated)
-├── cli.py                       Command-line interface
+│   └── vsm_index.json           Pre-built TF-IDF index (~1.9 MB, auto-generated)
+├── cli.py                       Command-line interface with colored output
 └── venv/                        Python virtual environment
 ```
 
@@ -84,7 +87,7 @@ source venv/bin/activate
 python apps/backend/app.py
 ```
 
-Server starts at **http://localhost:8080**. The TF-IDF index loads automatically on first run (or rebuilds if not found).
+The server starts at **http://localhost:8080**. On first run it loads the pre-built index from `indexes/vsm_index.json`. If that file is missing it builds the index from scratch (takes ~10–15 seconds).
 
 ### Start the frontend (Terminal 2)
 
@@ -99,25 +102,27 @@ Open **http://localhost:3000** in your browser.
 
 ## CLI Usage
 
+The CLI is a standalone interface that works entirely without the web server.
+
 ```bash
 source venv/bin/activate
 
 # Single query
 python cli.py "make america great again"
 
-# Adjust threshold and result count
+# Adjust similarity threshold and result count
 python cli.py "immigration border wall" --alpha 0.01 --top_k 5
 
-# Run all 10 assignment queries
+# Run all 17 predefined queries
 python cli.py --run-all-queries
 
 # Show index statistics
 python cli.py --stats
 
-# Force rebuild the index
+# Force rebuild the index from documents
 python cli.py --rebuild
 
-# Interactive mode
+# Interactive mode (REPL)
 python cli.py
 ```
 
@@ -127,19 +132,31 @@ python cli.py
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/health` | Server and index status |
-| GET | `/stats` | Vocabulary size, document count, postings |
-| GET | `/queries` | Load the 10 predefined queries |
-| POST | `/search` | Run a VSM query |
-| GET | `/document/<id>` | Fetch full text of a document |
-| POST | `/build` | Rebuild index with custom min_df / max_df_ratio |
+| GET | `/health` | Server status and index load confirmation |
+| GET | `/stats` | Vocabulary size, document count, total postings, avg terms/doc |
+| GET | `/queries` | Returns the 17 predefined queries from `queries.txt` |
+| POST | `/search` | Run a VSM query, returns ranked results with scores |
+| GET | `/document/<id>` | Fetch full text and word count of a single document |
+| POST | `/build` | Rebuild the index with custom `min_df` / `max_df_ratio` |
 
 **POST /search** request body:
 ```json
 {
   "query": "military defense national security",
-  "alpha": 0.005,
-  "top_k": 20
+  "alpha": 0.005
+}
+```
+
+Response:
+```json
+{
+  "query": "military defense national security",
+  "results": [
+    { "doc_id": 17, "score": 0.310923 },
+    { "doc_id": 5,  "score": 0.289441 }
+  ],
+  "total": 12,
+  "alpha": 0.005
 }
 ```
 
@@ -147,30 +164,82 @@ python cli.py
 
 ## How It Works
 
-### Preprocessing Pipeline
-1. **Case folding** — lowercase all text
-2. **Tokenization** — split on whitespace
-3. **Stopword removal** — filter 26 common words from provided list
-4. **Lemmatization** — reduce words to base form using WordNet
+### 1. Preprocessing (`packages/core/preprocessing.py`)
 
-### Indexing
-- **TF** — raw term count per document
-- **IDF** — `log(N / df)` where N = 56, df = document frequency
-- **TF-IDF weight** — `tf × idf` stored per document per term
-- **Feature selection** — terms filtered by `min_df` and `max_df_ratio`
-- Index serialised to `indexes/vsm_index.json`
+Every document and every query goes through the same four-step pipeline:
 
-### Query Processing
-1. Query preprocessed through same pipeline as documents
-2. Query TF-IDF vector built in the same feature space
-3. Cosine similarity computed against every document vector
-4. Documents with score ≤ α (0.005) are filtered out
-5. Results returned sorted by descending similarity score
+| Step | Operation | Detail |
+|------|-----------|--------|
+| 1 | Case folding | `text.lower()` |
+| 2 | Cleaning | `re.sub(r'[^a-z\s]', ' ', text)` — removes all non-alpha characters |
+| 3 | Tokenization | `text.split()` — whitespace split |
+| 4 | Stopword removal | Filters 26 words from `data/stopwords/stopwords-list.txt` |
+| 5 | Lemmatization | WordNet lemmatizer, NOUN POS for all tokens |
 
-### Cosine Similarity
+Applying the same pipeline to queries and documents guarantees the query vector and document vectors live in the same feature space.
+
+### 2. Indexing (`packages/core/indexer.py`)
+
+`build_index()` constructs the following data structures and returns them as a single dictionary:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `tfidf` | `{doc_id: {term: weight}}` | TF-IDF weight for every term in every document |
+| `tf` | `{doc_id: {term: count}}` | Raw term frequencies (stored for reference) |
+| `idf` | `{term: float}` | `log(N / df)` for each vocabulary term |
+| `df` | `{term: int}` | Document frequency per term |
+| `doc_norms` | `{doc_id: float}` | Euclidean norm of each document's TF-IDF vector |
+| `vocabulary` | `[str]` | Sorted list of all retained terms |
+| `N` | `int` | Total number of documents (56) |
+
+**TF-IDF formula:**
 ```
-sim(q, d) = (q · d) / (|q| × |d|)
+tf(t, d)  = raw count of term t in document d
+idf(t)    = log(N / df(t))
+w(t, d)   = tf(t, d) × idf(t)
 ```
+
+**Feature selection:** terms with `df < min_df` (default 1) or `df > max_df_ratio × N` (default 0.95 × 56 = 53) are excluded from the vocabulary.
+
+The index is serialised to `indexes/vsm_index.json`. JSON only supports string keys, so integer `doc_id` keys are stringified on save and converted back to `int` on load.
+
+### 3. Query Processing (`packages/core/vsm.py` + `query_processor.py`)
+
+```
+query text
+    └─► preprocess_text()         same pipeline as documents
+    └─► build_query_vector()      raw TF × IDF for each query term in vocabulary
+    └─► cosine_similarity()       per document
+    └─► filter by alpha           drop documents with score ≤ 0.005
+    └─► sort descending           return ranked list
+```
+
+**Cosine similarity formula:**
+```
+sim(q, d) = (q⃗ · d⃗) / (|q⃗| × |d⃗|)
+```
+
+- The dot product only iterates over terms shared between query and document (sparse optimisation).
+- `doc_norms` are pre-computed at index time so they are not recomputed per query.
+- `query_norm` is computed from all query terms (including those with no document match), which correctly penalises partial matches.
+
+### 4. Flask API (`apps/backend/app.py`)
+
+- Index is loaded once at startup into the module-level `_index` variable.
+- Subsequent requests reuse the cached index — no disk I/O per query.
+- `get_index()` handles both the load-from-disk and build-from-scratch paths transparently.
+
+### 5. Frontend (`apps/frontend/src/`)
+
+| File | Role |
+|------|------|
+| `SearchContext.jsx` | Single source of truth. Holds `query`, `results`, `loading`, `error`, `stats`, `selectedDocId` via `useReducer`. |
+| `api.js` | Thin fetch wrapper. All requests go to `http://localhost:8080`. Throws on non-2xx responses. |
+| `SearchBar.jsx` | Controlled input. Dispatches `SET_QUERY` and calls `search()` on submit. |
+| `QueryPresets.jsx` | Renders preset query chips from `/queries`. Clicking a chip sets the query and immediately searches. |
+| `Results.jsx` | Maps `state.results` to ranked cards. Score badge colour: green ≥ 0.30, yellow ≥ 0.10, red < 0.10. |
+| `StatsPanel.jsx` | Displays vocabulary size, document count, total postings, avg terms/doc from `/stats`. Also shows the score legend and TF-IDF formula. |
+| `DocumentModal.jsx` | Full-screen overlay showing raw document text. Highlights query terms using `String.split()` with a capture-group regex. |
 
 ---
 

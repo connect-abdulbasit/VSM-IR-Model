@@ -4,6 +4,7 @@ import SearchBar from './components/SearchBar'
 import QueryPresets from './components/QueryPresets'
 import Results from './components/Results'
 import DocumentModal from './components/DocumentModal'
+import StatsPanel from './components/StatsPanel'
 
 export default function App() {
   return (
@@ -53,6 +54,9 @@ export default function App() {
         </div>
 
         <main style={{ flex: 1, padding: '24px', maxWidth: 720, margin: '0 auto', width: '100%' }}>
+          <div style={{ marginBottom: 20 }}>
+            <StatsPanel />
+          </div>
           <Results />
         </main>
 

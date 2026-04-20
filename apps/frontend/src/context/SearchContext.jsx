@@ -11,8 +11,6 @@ const initialState = {
   error:          null,
   stats:          null,
   presetQueries:  [],
-  alpha:          0.005,
-  topK:           20,
   selectedDocId:  null,
   selectedDoc:    null,
   docLoading:     false,
@@ -22,8 +20,6 @@ const initialState = {
 function reducer(state, action) {
   switch (action.type) {
     case 'SET_QUERY':       return { ...state, query: action.payload }
-    case 'SET_ALPHA':       return { ...state, alpha: action.payload }
-    case 'SET_TOPK':        return { ...state, topK: action.payload }
     case 'SEARCH_START':    return { ...state, loading: true, error: null, hasSearched: true }
     case 'SEARCH_SUCCESS':  return { ...state, loading: false, results: action.results, total: action.total }
     case 'SEARCH_ERROR':    return { ...state, loading: false, error: action.error, results: [] }
@@ -59,7 +55,7 @@ export function SearchProvider({ children }) {
     dispatch({ type: 'SET_QUERY', payload: q })
     dispatch({ type: 'SEARCH_START' })
     try {
-      const data = await api.search(q, state.alpha, state.topK)
+      const data = await api.search(q)
       dispatch({ type: 'SEARCH_SUCCESS', results: data.results, total: data.total })
     } catch (err) {
       dispatch({ type: 'SEARCH_ERROR', error: err.message })

@@ -17,10 +17,10 @@ export const api = {
   stats:     ()              => request('/stats'),
   queries:   ()              => request('/queries'),
   document:  (id)            => request(`/document/${id}`),
-  search:    (query, alpha = 0.005, top_k = 20) =>
+  search:    (query) =>
     request('/search', {
       method: 'POST',
-      body: JSON.stringify({ query, alpha, top_k }),
+      body: JSON.stringify({ query, alpha: 0.005 }),
     }),
   rebuild: (min_df = 1, max_df_ratio = 0.95) =>
     request('/build', {

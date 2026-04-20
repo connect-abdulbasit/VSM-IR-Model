@@ -66,13 +66,12 @@ def search():
     data = request.get_json(force=True)
     query = (data.get('query') or '').strip()
     alpha = float(data.get('alpha', 0.005))
-    top_k = int(data.get('top_k', 20))
 
     if not query:
         return jsonify({'error': 'Query cannot be empty'}), 400
 
     idx = get_index()
-    results = process_query(query, idx, alpha=alpha, top_k=top_k)
+    results = process_query(query, idx, alpha=alpha, top_k=None)
 
     return jsonify({
         'query': query,
@@ -127,7 +126,6 @@ if __name__ == '__main__':
     print("=" * 60)
     print("  VSM Information Retrieval System — Backend API")
     print("=" * 60)
-    get_index()
     idx = get_index()
     print(f"  Documents : {idx['N']}")
     print(f"  Vocabulary: {len(idx['vocabulary'])} terms")

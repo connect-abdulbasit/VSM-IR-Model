@@ -3,9 +3,9 @@ import { useSearch } from '../context/SearchContext'
 
 const styles = {
   panel: {
-    background: 'var(--bg-card)',
-    border: '1px solid var(--border)',
-    borderRadius: 'var(--radius-lg)',
+    background: 'var(--white)',
+    border: '1px solid var(--gray-200)',
+    borderRadius: 'var(--radius)',
     padding: '20px',
     display: 'flex',
     flexDirection: 'column',
@@ -14,7 +14,7 @@ const styles = {
   title: {
     fontSize: '12px',
     fontWeight: '600',
-    color: 'var(--text-muted)',
+    color: 'var(--gray-500)',
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
   },
@@ -24,8 +24,8 @@ const styles = {
     gap: '12px',
   },
   stat: {
-    background: 'var(--bg-secondary)',
-    borderRadius: 'var(--radius-sm)',
+    background: 'var(--gray-50)',
+    borderRadius: 'var(--radius)',
     padding: '12px',
     display: 'flex',
     flexDirection: 'column',
@@ -34,30 +34,21 @@ const styles = {
   statVal: {
     fontSize: '22px',
     fontWeight: '700',
-    color: 'var(--text-primary)',
+    color: 'var(--gray-800)',
     fontFamily: 'JetBrains Mono, monospace',
     lineHeight: 1,
   },
   statLbl: {
     fontSize: '11px',
-    color: 'var(--text-muted)',
+    color: 'var(--gray-500)',
     textTransform: 'uppercase',
     letterSpacing: '0.06em',
-  },
-  badge: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '4px 10px',
-    borderRadius: '20px',
-    fontSize: '11px',
-    fontWeight: '500',
   },
   legend: {
     display: 'flex',
     flexDirection: 'column',
     gap: '6px',
-    borderTop: '1px solid var(--border)',
+    borderTop: '1px solid var(--gray-200)',
     paddingTop: '14px',
   },
   legendRow: {
@@ -65,7 +56,7 @@ const styles = {
     alignItems: 'center',
     gap: '8px',
     fontSize: '12px',
-    color: 'var(--text-secondary)',
+    color: 'var(--gray-600)',
   },
   dot: (color) => ({
     width: '10px', height: '10px',
@@ -75,7 +66,7 @@ const styles = {
   }),
 }
 
-function Stat({ value, label, color = 'var(--blue)' }) {
+function Stat({ value, label, color = 'var(--blue-600)' }) {
   return (
     <div style={styles.stat}>
       <span style={{ ...styles.statVal, color }}>{value ?? '—'}</span>
@@ -93,34 +84,34 @@ export default function StatsPanel() {
       <span style={styles.title}>Index Statistics</span>
 
       <div style={styles.grid}>
-        <Stat value={s?.num_documents}   label="Documents"   color="var(--blue)" />
-        <Stat value={s?.vocabulary_size?.toLocaleString()} label="Vocabulary"  color="var(--purple)" />
-        <Stat value={s?.total_postings?.toLocaleString()}  label="Postings"    color="var(--green)" />
-        <Stat value={s?.avg_terms_per_doc} label="Avg/Doc"   color="var(--yellow)" />
+        <Stat value={s?.num_documents}   label="Documents"   color="var(--blue-600)" />
+        <Stat value={s?.vocabulary_size?.toLocaleString()} label="Vocabulary"  color="var(--gray-700)" />
+        <Stat value={s?.total_postings?.toLocaleString()}  label="Postings"    color="var(--green-700)" />
+        <Stat value={s?.avg_terms_per_doc} label="Avg/Doc"   color="var(--yellow-700)" />
       </div>
 
       <div style={styles.legend}>
         <span style={{ ...styles.statLbl, marginBottom: '4px' }}>Score Legend</span>
         <div style={styles.legendRow}>
-          <div style={styles.dot('var(--green)')} />
+          <div style={styles.dot('var(--green-700)')} />
           High similarity ≥ 0.30
         </div>
         <div style={styles.legendRow}>
-          <div style={styles.dot('var(--yellow)')} />
+          <div style={styles.dot('var(--yellow-700)')} />
           Medium similarity 0.10 – 0.30
         </div>
         <div style={styles.legendRow}>
-          <div style={styles.dot('var(--red)')} />
+          <div style={styles.dot('var(--red-700)')} />
           Low similarity &lt; 0.10
         </div>
       </div>
 
       <div style={styles.legend}>
         <span style={{ ...styles.statLbl, marginBottom: '4px' }}>Weighting Scheme</span>
-        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontFamily: 'JetBrains Mono, monospace' }}>
+        <span style={{ fontSize: '12px', color: 'var(--gray-600)', fontFamily: 'JetBrains Mono, monospace' }}>
           w(t,d) = tf(t,d) × log(N/df(t))
         </span>
-        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontFamily: 'JetBrains Mono, monospace' }}>
+        <span style={{ fontSize: '12px', color: 'var(--gray-600)', fontFamily: 'JetBrains Mono, monospace' }}>
           sim(q,d) = cos(q⃗, d⃗)
         </span>
       </div>
